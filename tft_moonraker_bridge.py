@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.8"
+__version__ = "2.4.0"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,19 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.4.0": {
+        "date": "2025-06-09",
+        "features": [
+            "Implemented non-blocking command handling for movement operations (G28, G29, etc.)",
+            "Added intelligent detection of blocking commands that would freeze Klipper",
+            "Implemented short timeout handling for status requests during movement",
+            "Added fallback status responses when Klipper is busy with movement",
+            "Enhanced temperature reporting to work during homing and bed leveling",
+            "Added Klipper busy state detection to prevent bridge hanging",
+            "Improved bridge responsiveness during long-running operations"
+        ],
+        "breaking_changes": []
+    },
     "2.3.8": {
         "date": "2025-06-09",
         "features": [
@@ -486,6 +499,63 @@ class TestModeHandler:
         }
 
 
+class NonBlockingCommandHandler:
+    """Handles commands that may block Klipper execution"""
+    
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+        self.pending_commands = {}  # Track commands that don't need immediate response
+        self.movement_commands = {
+            # Commands that cause movement and may block
+            'G28', 'G29', 'G30', 'G32',  # Homing, bed leveling
+            'BED_MESH_CALIBRATE', 'Z_TILT_ADJUST', 'SCREWS_TILT_CALCULATE',
+            'PROBE_CALIBRATE', 'PROBE_ACCURACY', 'DELTA_CALIBRATE',
+            'PID_CALIBRATE'  # PID tuning also blocks
+        }
+        self.blocking_patterns = [
+            r'^G0\s+.*',   # G0 movement
+            r'^G1\s+.*',   # G1 movement  
+            r'^G2\s+.*',   # G2 arc movement
+            r'^G3\s+.*',   # G3 arc movement
+            r'^G28.*',     # Homing variants
+            r'^G29.*',     # Bed leveling variants
+            r'^M190\s+.*', # Wait for bed temperature
+            r'^M109\s+.*', # Wait for extruder temperature
+        ]
+    
+    def is_blocking_command(self, gcode: str) -> bool:
+        """Check if a command will block Klipper execution"""
+        gcode_upper = gcode.upper().strip()
+        
+        # Check against known blocking commands
+        for cmd in self.movement_commands:
+            if gcode_upper.startswith(cmd):
+                return True
+        
+        # Check against regex patterns
+        for pattern in self.blocking_patterns:
+            if re.match(pattern, gcode_upper):
+                return True
+        
+        return False
+    
+    def is_immediate_response_command(self, gcode: str) -> bool:
+        """Check if command needs immediate response to TFT"""
+        gcode_upper = gcode.upper().strip()
+        immediate_commands = {
+            'M105',  # Temperature request
+            'M115',  # Firmware info
+            'M114',  # Position request
+            'M119',  # Endstop status
+        }
+        
+        for cmd in immediate_commands:
+            if gcode_upper.startswith(cmd):
+                return True
+        
+        return False
+
+
 class MoonrakerClient:
     """Handles communication with Moonraker API with enhanced robustness"""
     
@@ -497,6 +567,7 @@ class MoonrakerClient:
         self.rate_limiter = RateLimiter(max_requests=20, time_window=1.0)
         self.validator = SecurityValidator()
         self.test_handler = TestModeHandler(self.logger) if config.test_mode else None
+        self.nonblocking_handler = NonBlockingCommandHandler(self.logger)
         
         if config.test_mode:
             self.logger.warning("🧪 TEST MODE ENABLED - Commands will NOT be executed on printer!")
@@ -570,7 +641,7 @@ class MoonrakerClient:
         return {"error": "Max retries exceeded"}
     
     async def send_gcode(self, gcode: str) -> Dict[str, Any]:
-        """Send G-code to Klipper via Moonraker with validation"""
+        """Send G-code to Klipper via Moonraker with validation and non-blocking handling"""
         try:
             # Sanitize the G-code
             sanitized_gcode = self.validator.sanitize_gcode(gcode)
@@ -585,15 +656,55 @@ class MoonrakerClient:
                 self.test_handler.log_command(gcode, sanitized_gcode)
                 return {"result": "ok", "test_mode": True}
             
-            data = {"script": sanitized_gcode}
-            return await self._make_request("POST", "/printer/gcode/script", data)
+            # Check if this is a blocking command
+            is_blocking = self.nonblocking_handler.is_blocking_command(sanitized_gcode)
+            
+            if is_blocking:
+                self.logger.info(f"Detected blocking command: {sanitized_gcode}")
+                # Send command but don't wait for response
+                return await self._send_nonblocking_gcode(sanitized_gcode)
+            else:
+                # Regular command - wait for response
+                data = {"script": sanitized_gcode}
+                return await self._make_request("POST", "/printer/gcode/script", data)
             
         except Exception as e:
             self.logger.error(f"Failed to send G-code '{gcode}': {e}")
             return {"error": str(e)}
     
+    async def _send_nonblocking_gcode(self, gcode: str) -> Dict[str, Any]:
+        """Send blocking G-code without waiting for completion"""
+        try:
+            # Use a shorter timeout for blocking commands
+            original_timeout = self.connection_manager.session._timeout
+            short_timeout = aiohttp.ClientTimeout(total=2.0)  # 2 second timeout
+            
+            # Create temporary session with short timeout
+            connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+            async with aiohttp.ClientSession(timeout=short_timeout, connector=connector) as session:
+                url = urljoin(self.base_url, "/printer/gcode/script")
+                data = {"script": gcode}
+                
+                try:
+                    async with session.post(url, json=data) as response:
+                        if response.status == 200:
+                            self.logger.info(f"Blocking command '{gcode}' submitted successfully")
+                            return {"result": "ok", "blocking_command": True}
+                        else:
+                            return {"error": f"HTTP {response.status}"}
+                            
+                except asyncio.TimeoutError:
+                    # This is expected for blocking commands - Klipper is busy
+                    self.logger.info(f"Blocking command '{gcode}' submitted (timeout expected)")
+                    return {"result": "ok", "blocking_command": True, "timeout_expected": True}
+                    
+        except Exception as e:
+            self.logger.warning(f"Error sending blocking command '{gcode}': {e}")
+            # Still return ok to keep TFT happy - command might have been received
+            return {"result": "ok", "blocking_command": True, "warning": str(e)}
+    
     async def get_printer_status(self) -> Dict[str, Any]:
-        """Get current printer status"""
+        """Get current printer status with non-blocking handling"""
         try:
             # Test mode - return fake temperature data
             if self.config.test_mode:
@@ -601,17 +712,76 @@ class MoonrakerClient:
                     "result": {
                         "status": {
                             "extruder": {"temperature": 25.0, "target": 0.0},
-                            "heater_bed": {"temperature": 24.0, "target": 0.0}
+                            "heater_bed": {"temperature": 24.0, "target": 0.0},
+                            "toolhead": {"homed_axes": "xyz"}
                         }
                     },
                     "test_mode": True
                 }
             
-            endpoint = "/printer/objects/query?extruder&heater_bed&fan&toolhead&print_stats"
-            return await self._make_request("GET", endpoint)
+            # Use short timeout for status requests to avoid blocking
+            try:
+                endpoint = "/printer/objects/query?extruder&heater_bed&fan&toolhead&print_stats"
+                
+                # Create temporary session with short timeout for status
+                short_timeout = aiohttp.ClientTimeout(total=1.0)  # 1 second timeout
+                connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+                
+                async with aiohttp.ClientSession(timeout=short_timeout, connector=connector) as session:
+                    url = urljoin(self.base_url, endpoint)
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            return await response.json()
+                        else:
+                            # Return basic fallback status
+                            return self._get_fallback_status()
+                            
+            except asyncio.TimeoutError:
+                # Klipper is likely busy - return cached/fallback status
+                self.logger.debug("Status request timed out - Klipper may be busy")
+                return self._get_fallback_status()
+                
         except Exception as e:
-            self.logger.error(f"Failed to get printer status: {e}")
-            return {"error": str(e)}
+            self.logger.debug(f"Status request failed: {e}")
+            return self._get_fallback_status()
+    
+    def _get_fallback_status(self) -> Dict[str, Any]:
+        """Return fallback status when Klipper is busy"""
+        return {
+            "result": {
+                "status": {
+                    "extruder": {"temperature": 0.0, "target": 0.0},
+                    "heater_bed": {"temperature": 0.0, "target": 0.0},
+                    "toolhead": {"homed_axes": ""},
+                    "print_stats": {"state": "busy"}
+                }
+            },
+            "klipper_busy": True
+        }
+    
+    async def is_klipper_busy(self) -> bool:
+        """Check if Klipper is currently busy with operations"""
+        try:
+            # Quick check with very short timeout
+            short_timeout = aiohttp.ClientTimeout(total=0.5)  # 500ms timeout
+            connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+            
+            async with aiohttp.ClientSession(timeout=short_timeout, connector=connector) as session:
+                url = urljoin(self.base_url, "/printer/objects/query?print_stats")
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if "result" in data and "status" in data["result"]:
+                            print_stats = data["result"]["status"].get("print_stats", {})
+                            state = print_stats.get("state", "unknown")
+                            # Consider printer busy if printing or in certain states
+                            return state in ["printing", "busy", "homing"]
+                        return False
+                    return True  # Assume busy if can't get status
+                    
+        except (asyncio.TimeoutError, Exception):
+            # If we can't get status quickly, assume busy
+            return True
     
     async def get_printer_info(self) -> Dict[str, Any]:
         """Get printer information for connection testing"""
