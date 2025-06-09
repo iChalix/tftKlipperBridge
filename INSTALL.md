@@ -205,3 +205,43 @@ After successful installation:
 3. **Check status**: `sudo systemctl status tft-bridge`
 4. **View logs**: `sudo journalctl -u tft-bridge -f`
 5. **Test TFT**: Connect TFT and verify functionality
+
+## 🗑️ Uninstallation
+
+To completely remove the TFT bridge from your system:
+
+### Quick Uninstall
+```bash
+cd tftKlipperBridge
+./uninstall_tft_bridge.sh
+```
+
+### What Gets Removed
+- **Always removed:**
+  - TFT bridge systemd service
+  - Service configuration files
+  - Helper scripts (bridge_control.sh, bridge_status.sh, etc.)
+  - Log files
+
+- **Optionally removed** (script will ask):
+  - Bridge Python scripts
+  - Klipper macro files
+  - Virtual environment
+  - Include lines from printer.cfg
+
+### Safe Removal
+The uninstall script:
+- ✅ **Asks before removing optional components**
+- ✅ **Creates backups of modified files**
+- ✅ **Stops services gracefully**
+- ✅ **Verifies complete removal**
+- ✅ **Provides removal summary**
+
+### Manual Cleanup (if needed)
+```bash
+# If uninstall script isn't available
+sudo systemctl stop tft-bridge
+sudo systemctl disable tft-bridge
+sudo rm /etc/systemd/system/tft-bridge.service
+sudo systemctl daemon-reload
+```

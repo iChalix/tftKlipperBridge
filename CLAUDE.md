@@ -44,6 +44,9 @@ python3 tft_moonraker_bridge.py --serial-port /dev/ttyUSB0 --test-mode
 # Quick setup
 ./setup_tft_bridge.sh
 
+# Uninstall (complete removal)
+./uninstall_tft_bridge.sh
+
 # Check dependencies
 python3 check_dependencies.py
 

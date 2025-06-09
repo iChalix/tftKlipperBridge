@@ -213,6 +213,22 @@ To update the bridge:
 2. Replace the file in your installation directory
 3. Restart the service: `sudo systemctl restart tft-bridge`
 
+## 🗑️ Uninstall
+
+To completely remove the TFT bridge:
+```bash
+cd tftKlipperBridge
+./uninstall_tft_bridge.sh
+```
+
+**What gets removed:**
+- ✅ TFT bridge systemd service
+- ✅ Service configuration files
+- ✅ Helper scripts and log files
+- ⚠️ **Optional:** Bridge scripts, Klipper macros, virtual environment
+
+**Safe removal:** The script asks before removing optional components
+
 ## 📋 Version Management
 
 ### Check Version Information
