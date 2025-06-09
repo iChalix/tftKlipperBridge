@@ -134,7 +134,7 @@ interactive_configuration() {
     
     read -p "Service User [$BRIDGE_USER]: " input
     BRIDGE_USER="${input:-$BRIDGE_USER}"
-    BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}"
+    BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}/tft-klipper-bridge"
     KLIPPER_CONFIG_DIR="/home/${BRIDGE_USER}/printer_data/config"
     
     echo ""

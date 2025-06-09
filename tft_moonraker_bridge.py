@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.5"
+__version__ = "2.3.6"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,16 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.3.6": {
+        "date": "2025-06-09",
+        "features": [
+            "Fixed interactive configuration bug that reset installation directory path",
+            "Ensured installation directory consistently uses ~/tft-klipper-bridge/ subfolder",
+            "Completed comprehensive testing of new directory structure",
+            "Verified all installation scripts use proper subdirectory structure"
+        ],
+        "breaking_changes": []
+    },
     "2.3.5": {
         "date": "2025-06-09",
         "features": [
