@@ -46,10 +46,10 @@ cd "$TEMP_DIR"
 
 # Clone the repository
 echo "Cloning repository..."
-git clone --depth 1 https://github.com/bigtreetech/BIGTREETECH-TouchScreenFirmware.git
+git clone --depth 1 https://github.com/iChalix/tftKlipperBridge.git
 
 # Navigate to bridge directory
-cd BIGTREETECH-TouchScreenFirmware/tftKlipperBridge
+cd tftKlipperBridge
 
 echo -e "${GREEN}✓ Download complete${NC}"
 echo ""

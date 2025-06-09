@@ -475,7 +475,7 @@ create_systemd_service() {
     sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null << EOF
 [Unit]
 Description=TFT Moonraker Bridge
-Documentation=https://github.com/bigtreetech/BIGTREETECH-TouchScreenFirmware
+Documentation=https://github.com/iChalix/tftKlipperBridge
 After=network.target klipper.service moonraker.service
 Wants=klipper.service moonraker.service
 

@@ -506,8 +506,8 @@ if [[ ! -f "tft_moonraker_bridge.py" ]]; then
     echo "Please download the complete tftKlipperBridge folder or run from the correct directory"
     echo ""
     echo "Quick download:"
-    echo "  git clone https://github.com/bigtreetech/BIGTREETECH-TouchScreenFirmware.git"
-    echo "  cd BIGTREETECH-TouchScreenFirmware/tftKlipperBridge"
+    echo "  git clone https://github.com/iChalix/tftKlipperBridge.git"
+    echo "  cd tftKlipperBridge"
     echo "  ./run_standalone.sh"
     exit 1
 fi
