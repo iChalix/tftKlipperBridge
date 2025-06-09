@@ -16,7 +16,8 @@ NC='\033[0m' # No Color
 # Default configuration
 BRIDGE_USER="${BRIDGE_USER:-pi}"
 SERVICE_NAME="tft-bridge"
-BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}"
+BRIDGE_BASE_DIR="/home/${BRIDGE_USER}"
+BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}/tft-klipper-bridge"
 KLIPPER_CONFIG_DIR="/home/${BRIDGE_USER}/printer_data/config"
 
 # Functions
@@ -127,10 +128,19 @@ remove_helper_scripts() {
     
     local removed_count=0
     for script in "${scripts[@]}"; do
-        local script_path="${BRIDGE_INSTALL_DIR}/${script}"
-        if [[ -f "$script_path" ]]; then
-            rm -f "$script_path"
-            print_success "Removed: $script"
+        # Check both old location (home directory) and new location (subfolder)
+        local old_path="${BRIDGE_BASE_DIR}/${script}"
+        local new_path="${BRIDGE_INSTALL_DIR}/${script}"
+        
+        if [[ -f "$old_path" ]]; then
+            rm -f "$old_path"
+            print_success "Removed: $script (from home directory)"
+            ((removed_count++))
+        fi
+        
+        if [[ -f "$new_path" ]]; then
+            rm -f "$new_path"
+            print_success "Removed: $script (from installation directory)"
             ((removed_count++))
         fi
     done
@@ -145,21 +155,22 @@ remove_helper_scripts() {
 remove_log_files() {
     print_step "Removing log files..."
     
-    local log_files=(
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log"
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log.1"
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log.2"
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log.3"
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log.4"
-        "${BRIDGE_INSTALL_DIR}/tft_bridge.log.5"
+    local log_locations=(
+        "${BRIDGE_BASE_DIR}"
+        "${BRIDGE_INSTALL_DIR}"
     )
     
     local removed_count=0
-    for log_file in "${log_files[@]}"; do
-        if [[ -f "$log_file" ]]; then
-            rm -f "$log_file"
-            ((removed_count++))
-        fi
+    for location in "${log_locations[@]}"; do
+        for i in {0..5}; do
+            local log_file="${location}/tft_bridge.log"
+            [[ $i -gt 0 ]] && log_file="${location}/tft_bridge.log.$i"
+            
+            if [[ -f "$log_file" ]]; then
+                rm -f "$log_file"
+                ((removed_count++))
+            fi
+        done
     done
     
     if [[ $removed_count -eq 0 ]]; then
@@ -172,15 +183,29 @@ remove_log_files() {
 optional_remove_bridge_script() {
     print_step "Bridge Python script removal..."
     
-    local bridge_script="${BRIDGE_INSTALL_DIR}/tft_moonraker_bridge.py"
-    local original_script="${BRIDGE_INSTALL_DIR}/tft_moonraker_bridge_original.py"
+    local scripts_found=false
+    local scripts_to_check=(
+        "${BRIDGE_BASE_DIR}/tft_moonraker_bridge.py"
+        "${BRIDGE_BASE_DIR}/tft_moonraker_bridge_original.py"
+        "${BRIDGE_INSTALL_DIR}/tft_moonraker_bridge.py"
+        "${BRIDGE_INSTALL_DIR}/tft_moonraker_bridge_original.py"
+    )
     
-    if [[ -f "$bridge_script" ]] || [[ -f "$original_script" ]]; then
+    # Check if any scripts exist
+    for script in "${scripts_to_check[@]}"; do
+        [[ -f "$script" ]] && scripts_found=true
+    done
+    
+    if [[ "$scripts_found" == "true" ]]; then
         echo ""
         read -p "Remove bridge Python scripts? (y/N): " -r
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            [[ -f "$bridge_script" ]] && rm -f "$bridge_script" && print_success "Removed: tft_moonraker_bridge.py"
-            [[ -f "$original_script" ]] && rm -f "$original_script" && print_success "Removed: tft_moonraker_bridge_original.py"
+            for script in "${scripts_to_check[@]}"; do
+                if [[ -f "$script" ]]; then
+                    rm -f "$script"
+                    print_success "Removed: $(basename "$script") (from $(dirname "$script"))"
+                fi
+            done
         else
             print_info "Bridge scripts preserved"
         fi
@@ -232,19 +257,55 @@ optional_remove_klipper_macros() {
 remove_virtual_environment() {
     print_step "Virtual environment removal..."
     
-    local venv_dir="${BRIDGE_INSTALL_DIR}/.tft-bridge-venv"
+    local venv_locations=(
+        "${BRIDGE_BASE_DIR}/.tft-bridge-venv"
+        "${BRIDGE_INSTALL_DIR}/.tft-bridge-venv"
+    )
     
-    if [[ -d "$venv_dir" ]]; then
+    local found_venv=false
+    for venv_dir in "${venv_locations[@]}"; do
+        if [[ -d "$venv_dir" ]]; then
+            found_venv=true
+            break
+        fi
+    done
+    
+    if [[ "$found_venv" == "true" ]]; then
         echo ""
         read -p "Remove TFT bridge virtual environment? (y/N): " -r
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -rf "$venv_dir"
-            print_success "Removed virtual environment: $venv_dir"
+            for venv_dir in "${venv_locations[@]}"; do
+                if [[ -d "$venv_dir" ]]; then
+                    rm -rf "$venv_dir"
+                    print_success "Removed virtual environment: $venv_dir"
+                fi
+            done
         else
             print_info "Virtual environment preserved"
         fi
     else
         print_info "No virtual environment found"
+    fi
+}
+
+remove_installation_directory() {
+    print_step "Installation directory cleanup..."
+    
+    if [[ -d "$BRIDGE_INSTALL_DIR" ]]; then
+        # Check if directory is empty or only contains hidden files
+        if [[ -z "$(ls -A "$BRIDGE_INSTALL_DIR" 2>/dev/null)" ]]; then
+            echo ""
+            read -p "Remove empty installation directory? (y/N): " -r
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                rmdir "$BRIDGE_INSTALL_DIR" 2>/dev/null && print_success "Removed installation directory: $BRIDGE_INSTALL_DIR" || print_warning "Could not remove installation directory (may not be empty)"
+            else
+                print_info "Installation directory preserved"
+            fi
+        else
+            print_info "Installation directory contains files - preserved"
+        fi
+    else
+        print_info "Installation directory not found"
     fi
 }
 
@@ -359,6 +420,7 @@ main() {
     optional_remove_bridge_script
     optional_remove_klipper_macros
     remove_virtual_environment
+    remove_installation_directory
     
     # Verification
     if verify_removal; then

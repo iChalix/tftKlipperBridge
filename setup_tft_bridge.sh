@@ -27,7 +27,8 @@ MOONRAKER_PORT="7125"                   # Moonraker port
 BRIDGE_LOG_LEVEL="INFO"                 # Log level: DEBUG, INFO, WARNING, ERROR
 BRIDGE_TIMEOUT="5.0"                    # Request timeout in seconds
 BRIDGE_USER="pi"                        # User to run the service as
-BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}" # Installation directory
+BRIDGE_BASE_DIR="/home/${BRIDGE_USER}"    # Base user directory
+BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}/tft-klipper-bridge" # Installation directory
 
 # Service Configuration
 SERVICE_NAME="tft-bridge"               # Systemd service name

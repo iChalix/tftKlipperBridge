@@ -165,10 +165,33 @@ sudo systemctl status tft-bridge
 sudo journalctl -u tft-bridge -f
 
 # Helper scripts (created by installer)
-~/bridge_control.sh start|stop|restart
-~/bridge_status.sh
-~/start_bridge.sh  # Manual testing
+~/tft-klipper-bridge/bridge_control.sh start|stop|restart
+~/tft-klipper-bridge/bridge_status.sh
+~/tft-klipper-bridge/start_bridge.sh  # Manual testing
 ```
+
+## 📁 Installation Directory Structure
+
+The bridge now uses a clean installation structure:
+
+```
+~/tft-klipper-bridge/           # Main installation directory
+├── tft_moonraker_bridge.py     # Bridge script
+├── tft_bridge_config.sh        # Configuration
+├── bridge_control.sh           # Service control helper
+├── bridge_status.sh            # Status checker
+├── start_bridge.sh             # Manual start script
+└── .tft-bridge-venv/           # Virtual environment (if used)
+
+~/printer_data/config/          # Klipper configuration
+└── klipper_tft_macros.cfg      # TFT compatibility macros
+```
+
+**Benefits:**
+- ✅ **Clean home directory** - no clutter in ~/
+- ✅ **Organized structure** - all files in one place
+- ✅ **Easy maintenance** - simple to find and manage
+- ✅ **Backward compatible** - works with existing installations
 
 ## 🔍 Troubleshooting
 

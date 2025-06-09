@@ -318,7 +318,12 @@ check_and_install_dependencies() {
     # Method 1: Try virtual environment (best practice for newer Python)
     echo "Trying virtual environment approach..."
     if command -v python3 -m venv >/dev/null 2>&1; then
-        local venv_dir="$HOME/.tft-bridge-venv"
+        local bridge_dir="$HOME/tft-klipper-bridge"
+        local venv_dir="$bridge_dir/.tft-bridge-venv"
+        
+        # Create installation directory if it doesn't exist
+        mkdir -p "$bridge_dir"
+        
         if [[ ! -d "$venv_dir" ]]; then
             echo "Creating virtual environment..."
             python3 -m venv "$venv_dir" && source "$venv_dir/bin/activate"
