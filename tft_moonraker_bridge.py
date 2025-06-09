@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.4"
+__version__ = "2.3.5"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,16 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.3.5": {
+        "date": "2025-06-09",
+        "features": [
+            "Fixed installation directory creation and file placement",
+            "Ensured configuration files are created in proper installation directory",
+            "Added verification steps for installation directory creation",
+            "Improved installation process reliability and debugging output"
+        ],
+        "breaking_changes": []
+    },
     "2.3.4": {
         "date": "2025-06-09",
         "features": [
