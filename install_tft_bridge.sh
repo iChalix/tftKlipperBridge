@@ -279,20 +279,101 @@ check_prerequisites() {
 install_dependencies() {
     print_step "Installing Python dependencies..."
     
-    # Try to use requirements.txt if available, otherwise fallback to individual packages
+    # Method 1: Try system packages first (recommended for production)
+    print_info "Attempting system package installation..."
+    if command -v apt-get >/dev/null 2>&1; then
+        print_info "Detected apt package manager"
+        if apt-get update >/dev/null 2>&1 && apt-get install -y python3-serial python3-aiohttp python3-websockets python3-requests >/dev/null 2>&1; then
+            print_success "Dependencies installed via system packages"
+            return 0
+        fi
+    elif command -v dnf >/dev/null 2>&1; then
+        print_info "Detected dnf package manager"
+        if dnf install -y python3-pyserial python3-aiohttp python3-websockets python3-requests >/dev/null 2>&1; then
+            print_success "Dependencies installed via system packages"
+            return 0
+        fi
+    elif command -v pacman >/dev/null 2>&1; then
+        print_info "Detected pacman package manager"
+        if pacman -S --noconfirm python-pyserial python-aiohttp python-websockets python-requests >/dev/null 2>&1; then
+            print_success "Dependencies installed via system packages"
+            return 0
+        fi
+    fi
+    
+    # Method 2: Try virtual environment for the user
+    print_info "Trying virtual environment approach..."
+    local venv_dir="/home/$BRIDGE_USER/.tft-bridge-venv"
+    if sudo -u "$BRIDGE_USER" python3 -m venv "$venv_dir" 2>/dev/null; then
+        if sudo -u "$BRIDGE_USER" bash -c "source '$venv_dir/bin/activate' && pip install -r requirements.txt" 2>/dev/null; then
+            print_success "Dependencies installed in virtual environment"
+            print_info "Virtual environment created at $venv_dir"
+            
+            # Update the systemd service to use the virtual environment
+            export PYTHON_VENV="$venv_dir"
+            return 0
+        fi
+    fi
+    
+    # Method 3: Try --break-system-packages flag
+    print_info "Trying --break-system-packages flag..."
     if [[ -f "requirements.txt" ]]; then
-        sudo -u "$BRIDGE_USER" pip3 install --user -r requirements.txt || {
+        if sudo -u "$BRIDGE_USER" pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null; then
+            print_success "Dependencies installed with --break-system-packages"
+            return 0
+        fi
+    fi
+    
+    # Method 4: Traditional user install (fallback)
+    print_info "Trying traditional user install..."
+    if [[ -f "requirements.txt" ]]; then
+        if sudo -u "$BRIDGE_USER" pip3 install --user -r requirements.txt 2>/dev/null; then
+            print_success "Dependencies installed successfully"
+            return 0
+        else
             print_warning "Failed to install from requirements.txt, trying individual packages..."
-            sudo -u "$BRIDGE_USER" pip3 install --user pyserial websockets requests aiohttp || {
-                print_error "Failed to install Python dependencies"
-                exit 1
-            }
-        }
+            if sudo -u "$BRIDGE_USER" pip3 install --user pyserial websockets requests aiohttp 2>/dev/null; then
+                print_success "Dependencies installed successfully"
+                return 0
+            fi
+        fi
     else
-        sudo -u "$BRIDGE_USER" pip3 install --user pyserial websockets requests aiohttp || {
-            print_error "Failed to install Python dependencies"
-            exit 1
-        }
+        if sudo -u "$BRIDGE_USER" pip3 install --user pyserial websockets requests aiohttp 2>/dev/null; then
+            print_success "Dependencies installed successfully"
+            return 0
+        fi
+    fi
+    
+    # All methods failed
+    print_error "Failed to install Python dependencies automatically"
+    echo ""
+    print_info "This is likely due to externally-managed-environment restrictions."
+    echo ""
+    echo "Please manually install dependencies using one of these methods:"
+    echo ""
+    echo "1. System packages (recommended):"
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "   sudo apt update"
+        echo "   sudo apt install python3-serial python3-aiohttp python3-websockets python3-requests"
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "   sudo dnf install python3-pyserial python3-aiohttp python3-websockets python3-requests"
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "   sudo pacman -S python-pyserial python-aiohttp python-websockets python-requests"
+    else
+        echo "   (Use your distribution's package manager)"
+    fi
+    echo ""
+    echo "2. Virtual environment:"
+    echo "   sudo -u $BRIDGE_USER python3 -m venv /home/$BRIDGE_USER/.tft-bridge-venv"
+    echo "   sudo -u $BRIDGE_USER bash -c 'source /home/$BRIDGE_USER/.tft-bridge-venv/bin/activate && pip install -r requirements.txt'"
+    echo ""
+    echo "3. Override restrictions (not recommended):"
+    echo "   sudo -u $BRIDGE_USER pip3 install --user --break-system-packages -r requirements.txt"
+    echo ""
+    
+    read -p "Would you like to continue installation anyway? (y/n): " -r
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
     fi
     
     print_success "Python dependencies installed"

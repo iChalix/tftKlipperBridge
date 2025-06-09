@@ -141,6 +141,23 @@ pip3 install -r requirements.txt
 
 ## 🔍 Troubleshooting
 
+### "externally-managed-environment" Error
+This is a common issue with newer Python installations (Ubuntu 23.04+, Python 3.11+):
+
+```bash
+# Solution 1: Use system packages (recommended)
+sudo apt update
+sudo apt install python3-serial python3-aiohttp python3-websockets python3-requests
+
+# Solution 2: Use virtual environment
+python3 -m venv ~/.tft-bridge-venv
+source ~/.tft-bridge-venv/bin/activate
+pip install -r requirements.txt
+
+# Solution 3: Override restrictions (not recommended)
+pip3 install --user --break-system-packages -r requirements.txt
+```
+
 ### Dependencies Won't Install
 ```bash
 # Try upgrading pip first

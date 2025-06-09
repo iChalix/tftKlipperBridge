@@ -315,10 +315,67 @@ check_and_install_dependencies() {
     # Try to install automatically
     echo -e "${BLUE}Installing Python dependencies...${NC}"
     
-    # Method 1: Try requirements.txt if available
+    # Method 1: Try virtual environment (best practice for newer Python)
+    echo "Trying virtual environment approach..."
+    if command -v python3 -m venv >/dev/null 2>&1; then
+        local venv_dir="$HOME/.tft-bridge-venv"
+        if [[ ! -d "$venv_dir" ]]; then
+            echo "Creating virtual environment..."
+            python3 -m venv "$venv_dir" && source "$venv_dir/bin/activate"
+        else
+            source "$venv_dir/bin/activate"
+        fi
+        
+        if [[ -f "requirements.txt" ]]; then
+            echo "Installing from requirements.txt in virtual environment..."
+            if pip install -r requirements.txt; then
+                echo -e "${GREEN}✓ Dependencies installed in virtual environment${NC}"
+                echo -e "${BLUE}Note: Using virtual environment at $venv_dir${NC}"
+                export PYTHON_VENV="$venv_dir"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Method 2: Try --break-system-packages (for newer pip)
+    echo "Trying --break-system-packages flag..."
+    if [[ -f "requirements.txt" ]]; then
+        if pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}✓ Dependencies installed with --break-system-packages${NC}"
+            return 0
+        fi
+    fi
+    
+    # Method 3: Try system packages first (recommended)
+    echo "Trying system packages..."
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "Detected apt package manager, trying system packages..."
+        local system_packages="python3-serial python3-aiohttp python3-websockets python3-requests"
+        if sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y $system_packages >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Dependencies installed via system packages${NC}"
+            return 0
+        fi
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "Detected dnf package manager, trying system packages..."
+        local system_packages="python3-pyserial python3-aiohttp python3-websockets python3-requests"
+        if sudo dnf install -y $system_packages >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Dependencies installed via system packages${NC}"
+            return 0
+        fi
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "Detected pacman package manager, trying system packages..."
+        local system_packages="python-pyserial python-aiohttp python-websockets python-requests"
+        if sudo pacman -S --noconfirm $system_packages >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Dependencies installed via system packages${NC}"
+            return 0
+        fi
+    fi
+    
+    # Method 4: Traditional user install (fallback)
+    echo "Trying traditional user install..."
     if [[ -f "requirements.txt" ]]; then
         echo "Using requirements.txt..."
-        if pip3 install --user -r requirements.txt; then
+        if pip3 install --user -r requirements.txt 2>/dev/null; then
             echo -e "${GREEN}✓ Dependencies installed successfully${NC}"
             return 0
         else
@@ -326,28 +383,42 @@ check_and_install_dependencies() {
         fi
     fi
     
-    # Method 2: Install individual packages
+    # Method 5: Install individual packages
     echo "Installing individual packages..."
     local install_cmd="pip3 install --user"
     for package in "${missing_packages[@]}"; do
         install_cmd+=" $package"
     done
     
-    if $install_cmd; then
+    if $install_cmd 2>/dev/null; then
         echo -e "${GREEN}✓ Dependencies installed successfully${NC}"
         return 0
     else
         echo -e "${RED}✗ Failed to install dependencies automatically${NC}"
         echo ""
-        echo "Please install manually:"
-        if [[ -f "requirements.txt" ]]; then
-            echo "  ${YELLOW}pip3 install --user -r requirements.txt${NC}"
+        echo -e "${BLUE}This is likely due to externally-managed-environment restrictions.${NC}"
+        echo ""
+        echo "Please try one of these solutions:"
+        echo ""
+        echo -e "${YELLOW}1. Use virtual environment (recommended):${NC}"
+        echo "   python3 -m venv ~/.tft-bridge-venv"
+        echo "   source ~/.tft-bridge-venv/bin/activate"
+        echo "   pip install -r requirements.txt"
+        echo ""
+        echo -e "${YELLOW}2. Use system packages:${NC}"
+        if command -v apt-get >/dev/null 2>&1; then
+            echo "   sudo apt update"
+            echo "   sudo apt install python3-serial python3-aiohttp python3-websockets python3-requests"
+        elif command -v dnf >/dev/null 2>&1; then
+            echo "   sudo dnf install python3-pyserial python3-aiohttp python3-websockets python3-requests"
+        elif command -v pacman >/dev/null 2>&1; then
+            echo "   sudo pacman -S python-pyserial python-aiohttp python-websockets python-requests"
         else
-            echo "  ${YELLOW}pip3 install --user ${missing_packages[*]}${NC}"
+            echo "   (Use your distribution's package manager)"
         fi
         echo ""
-        echo "Or try with system packages:"
-        echo "  ${YELLOW}sudo apt install python3-serial python3-aiohttp python3-websockets python3-requests${NC}"
+        echo -e "${YELLOW}3. Override restrictions (not recommended):${NC}"
+        echo "   pip3 install --user --break-system-packages -r requirements.txt"
         echo ""
         
         if [[ "$INTERACTIVE" == "true" ]]; then

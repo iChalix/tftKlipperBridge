@@ -58,18 +58,41 @@ else
     echo "Installing dependencies..."
     
     # Try to install missing dependencies
+    echo "Trying multiple installation methods..."
+    
+    # Method 1: System packages
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "Trying system packages..."
+        if sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y python3-serial python3-aiohttp python3-websockets python3-requests >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Dependencies installed via system packages${NC}"
+        fi
+    fi
+    
+    # Method 2: Break system packages flag
     if [[ -f "requirements.txt" ]]; then
-        pip3 install --user -r requirements.txt || {
+        if pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}✓ Dependencies installed with --break-system-packages${NC}"
+        elif pip3 install --user -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}✓ Dependencies installed${NC}"
+        else
             echo -e "${RED}✗ Failed to install dependencies${NC}"
-            echo "Please install manually: pip3 install --user -r requirements.txt"
+            echo ""
+            echo "Please install manually:"
+            echo "1. System packages: sudo apt install python3-serial python3-aiohttp python3-websockets python3-requests"
+            echo "2. Or with pip: pip3 install --user --break-system-packages -r requirements.txt"
+            echo "3. Or virtual env: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
             exit 1
-        }
+        fi
     else
-        pip3 install --user pyserial aiohttp websockets requests || {
+        if pip3 install --user --break-system-packages pyserial aiohttp websockets requests 2>/dev/null; then
+            echo -e "${GREEN}✓ Dependencies installed with --break-system-packages${NC}"
+        elif pip3 install --user pyserial aiohttp websockets requests 2>/dev/null; then
+            echo -e "${GREEN}✓ Dependencies installed${NC}"
+        else
             echo -e "${RED}✗ Failed to install dependencies${NC}"
-            echo "Please install manually: pip3 install --user pyserial aiohttp websockets requests"
+            echo "Please install manually: pip3 install --user --break-system-packages pyserial aiohttp websockets requests"
             exit 1
-        }
+        fi
     fi
     echo -e "${GREEN}✓ Dependencies installed${NC}"
 fi

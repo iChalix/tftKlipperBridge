@@ -110,21 +110,53 @@ check_prerequisites() {
 install_dependencies() {
     print_info "Installing Python dependencies..."
     
-    # Try to use requirements.txt if available, otherwise fallback to individual packages
-    if [[ -f "requirements.txt" ]]; then
-        pip3 install --user -r requirements.txt || {
-            print_warning "Failed to install from requirements.txt, trying individual packages..."
-            pip3 install --user pyserial websockets requests aiohttp || {
-                print_error "Failed to install Python dependencies"
-                exit 1
-            }
-        }
-    else
-        pip3 install --user pyserial websockets requests aiohttp || {
-            print_error "Failed to install Python dependencies"
-            exit 1
-        }
+    # Method 1: Try system packages first
+    print_info "Attempting system package installation..."
+    if command -v apt-get >/dev/null 2>&1; then
+        if sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y python3-serial python3-aiohttp python3-websockets python3-requests >/dev/null 2>&1; then
+            print_success "Dependencies installed via system packages"
+            return 0
+        fi
+    elif command -v dnf >/dev/null 2>&1; then
+        if sudo dnf install -y python3-pyserial python3-aiohttp python3-websockets python3-requests >/dev/null 2>&1; then
+            print_success "Dependencies installed via system packages"
+            return 0
+        fi
     fi
+    
+    # Method 2: Try --break-system-packages flag
+    if [[ -f "requirements.txt" ]]; then
+        if pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null; then
+            print_success "Dependencies installed with --break-system-packages"
+            return 0
+        fi
+    fi
+    
+    # Method 3: Try traditional user install
+    if [[ -f "requirements.txt" ]]; then
+        if pip3 install --user -r requirements.txt 2>/dev/null; then
+            print_success "Dependencies installed successfully"
+            return 0
+        else
+            print_warning "Failed to install from requirements.txt, trying individual packages..."
+            if pip3 install --user pyserial websockets requests aiohttp 2>/dev/null; then
+                print_success "Dependencies installed successfully"
+                return 0
+            fi
+        fi
+    else
+        if pip3 install --user pyserial websockets requests aiohttp 2>/dev/null; then
+            print_success "Dependencies installed successfully"
+            return 0
+        fi
+    fi
+    
+    print_error "Failed to install Python dependencies automatically"
+    echo ""
+    print_info "This is likely due to externally-managed-environment restrictions."
+    echo "Please install manually using system packages or virtual environment."
+    echo "See INSTALL.md for detailed instructions."
+    exit 1
     
     print_success "Python dependencies installed"
 }

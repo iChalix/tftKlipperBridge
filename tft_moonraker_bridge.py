@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.0"
+__version__ = "2.3.1"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,17 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.3.1": {
+        "date": "2025-06-09",
+        "features": [
+            "Fixed externally-managed-environment pip installation errors",
+            "Added support for virtual environments in installation scripts",
+            "Enhanced dependency installation with multiple fallback methods",
+            "Improved system package manager support (apt, dnf, pacman)",
+            "Added comprehensive installation troubleshooting guides"
+        ],
+        "breaking_changes": []
+    },
     "2.3.0": {
         "date": "2025-06-09",
         "features": [
