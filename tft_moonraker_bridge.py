@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.1"
+__version__ = "2.3.2"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,16 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.3.2": {
+        "date": "2025-06-09",
+        "features": [
+            "Fixed Klipper macro file syntax error preventing configuration loading",
+            "Removed invalid top-level Jinja2 conditionals from macro file",
+            "Restructured macro definitions to use proper Klipper format",
+            "Maintained smart macro compatibility logic within macro definitions"
+        ],
+        "breaking_changes": []
+    },
     "2.3.1": {
         "date": "2025-06-09",
         "features": [
