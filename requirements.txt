@@ -1,0 +1,34 @@
+# TFT-Moonraker Bridge Requirements
+# Python dependencies for the TFT-Klipper bridge
+
+# Serial communication with TFT devices
+pyserial>=3.5
+
+# Async HTTP client for Moonraker API
+aiohttp>=3.8.0
+
+# WebSocket support (usually included with aiohttp, but explicit for clarity)
+websockets>=10.0
+
+# HTTP requests (used in some fallback scenarios and utilities)
+requests>=2.25.0
+
+# Standard library dependencies (usually included with Python 3.7+)
+# Listed here for completeness and compatibility checking
+
+# Note: The following are part of Python standard library since 3.7+
+# but listed for reference:
+# - asyncio (built-in since 3.4)
+# - json (built-in)
+# - re (built-in)
+# - argparse (built-in)
+# - logging (built-in)
+# - sys (built-in)
+# - time (built-in)
+# - os (built-in)
+# - signal (built-in)
+# - dataclasses (built-in since 3.7)
+# - typing (built-in since 3.5)
+# - urllib.parse (built-in)
+# - collections (built-in)
+# - socket (built-in)

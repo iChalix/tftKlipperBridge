@@ -1,0 +1,128 @@
+# TFT-Moonraker Bridge Configuration Template
+# Copy this file to tft_bridge_config.sh and edit the variables
+
+#!/bin/bash
+
+# =============================================================================
+# TFT SERIAL CONFIGURATION
+# =============================================================================
+
+# Serial port where your TFT is connected
+# Common options:
+#   /dev/ttyUSB0    - USB-to-serial adapter
+#   /dev/ttyACM0    - Direct USB connection
+#   /dev/serial0    - Raspberry Pi GPIO UART
+TFT_SERIAL_PORT="/dev/ttyUSB0"
+
+# Baud rate for TFT communication
+# Common options: 115200, 250000
+# Check your TFT's config.ini file for the correct rate
+TFT_BAUD_RATE="250000"
+
+# =============================================================================
+# MOONRAKER CONFIGURATION  
+# =============================================================================
+
+# Moonraker host IP address or hostname
+# Use "localhost" if running on the same machine as Klipper
+# Use IP address (e.g., "192.168.1.100") for remote connections
+MOONRAKER_HOST="localhost"
+
+# Moonraker port (usually 7125)
+MOONRAKER_PORT="7125"
+
+# =============================================================================
+# BRIDGE CONFIGURATION
+# =============================================================================
+
+# Log level for debugging
+# Options: DEBUG, INFO, WARNING, ERROR
+# Use DEBUG for troubleshooting, INFO for normal operation
+BRIDGE_LOG_LEVEL="INFO"
+
+# Request timeout in seconds
+# How long to wait for Moonraker responses
+BRIDGE_TIMEOUT="5.0"
+
+# User account to run the service under
+# Usually "pi" on Raspberry Pi systems
+BRIDGE_USER="pi"
+
+# Directory where bridge files will be installed
+BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}"
+
+# =============================================================================
+# SYSTEMD SERVICE CONFIGURATION
+# =============================================================================
+
+# Name of the systemd service
+SERVICE_NAME="tft-bridge"
+
+# Whether to automatically start the service on boot
+# Options: "yes" or "no"
+AUTO_START="yes"
+
+# =============================================================================
+# KLIPPER CONFIGURATION
+# =============================================================================
+
+# Klipper configuration directory
+# Mainsail/Fluidd: /home/pi/printer_data/config
+# OctoPrint: /home/pi/.octoprint/uploads
+KLIPPER_CONFIG_DIR="/home/${BRIDGE_USER}/printer_data/config"
+
+# Main Klipper configuration file name
+KLIPPER_CONFIG_FILE="printer.cfg"
+
+# =============================================================================
+# ADVANCED OPTIONS
+# =============================================================================
+
+# Additional command line arguments for the bridge
+# Leave empty for default behavior
+BRIDGE_EXTRA_ARGS=""
+
+# Restart delay in seconds if the service fails
+SERVICE_RESTART_DELAY="5"
+
+# Whether to create backup of existing files
+CREATE_BACKUPS="yes"
+
+# =============================================================================
+# HARDWARE-SPECIFIC SETTINGS
+# =============================================================================
+
+# TFT model (for documentation purposes)
+TFT_MODEL="TFT35_V2"
+
+# Mainboard type (for documentation purposes)  
+MAINBOARD_TYPE="SKR_MINI_E3"
+
+# Expected TFT firmware version (for documentation purposes)
+TFT_FIRMWARE_VERSION="27.x"
+
+# =============================================================================
+# NETWORK CONFIGURATION (for remote setups)
+# =============================================================================
+
+# If Moonraker is on a different machine, specify network details
+# Leave empty if using localhost
+
+# Remote Klipper host IP (if different from Moonraker)
+REMOTE_KLIPPER_HOST=""
+
+# SSH user for remote operations (if needed)
+REMOTE_SSH_USER=""
+
+# =============================================================================
+# VALIDATION SETTINGS
+# =============================================================================
+
+# Whether to validate connections before starting
+VALIDATE_CONNECTIONS="yes"
+
+# Whether to check for conflicting services
+CHECK_CONFLICTS="yes"
+
+# Whether to verify Klipper macro compatibility
+VERIFY_MACROS="yes"
