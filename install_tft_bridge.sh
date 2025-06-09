@@ -76,6 +76,8 @@ load_configuration() {
     if [[ -f "$CONFIG_FILE" ]]; then
         print_info "Loading configuration from $CONFIG_FILE"
         source "$CONFIG_FILE"
+        # Ensure installation directory is always set to the new structure
+        BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}/tft-klipper-bridge"
         return 0
     else
         return 1
@@ -383,6 +385,13 @@ install_dependencies() {
 install_bridge_files() {
     print_step "Installing bridge files..."
     
+    # Check for old installation in home directory
+    if [[ -f "/home/$BRIDGE_USER/tft_moonraker_bridge.py" ]] && [[ "$BRIDGE_INSTALL_DIR" != "/home/$BRIDGE_USER" ]]; then
+        print_warning "Found old installation in /home/$BRIDGE_USER"
+        print_info "New installation will be in: $BRIDGE_INSTALL_DIR"
+        print_info "Run uninstall_tft_bridge.sh to remove the old installation"
+    fi
+    
     # Create installation directory if it doesn't exist
     print_info "Creating installation directory: $BRIDGE_INSTALL_DIR"
     sudo -u "$BRIDGE_USER" mkdir -p "$BRIDGE_INSTALL_DIR"
@@ -673,6 +682,9 @@ main() {
             exit 0
         fi
     fi
+    
+    # Ensure installation directory is correctly set (fix for old configs)
+    BRIDGE_INSTALL_DIR="/home/${BRIDGE_USER}/tft-klipper-bridge"
     
     display_configuration_summary
     check_prerequisites

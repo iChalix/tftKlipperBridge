@@ -13,7 +13,7 @@ Version: 2.2.0
 """
 
 # Version information
-__version__ = "2.3.6"
+__version__ = "2.3.7"
 __build_date__ = "2025-06-09"
 __git_hash__ = "initial"
 __author__ = "Claude Code"
@@ -21,6 +21,16 @@ __license__ = "GPL-3.0"
 
 # Version history
 VERSION_HISTORY = {
+    "2.3.7": {
+        "date": "2025-06-09",
+        "features": [
+            "Fixed critical bug where old config files override new installation directory",
+            "Added automatic correction of installation directory for upgrades",
+            "Added detection and warning for old installations in home directory",
+            "Ensures helper scripts are always installed in ~/tft-klipper-bridge/"
+        ],
+        "breaking_changes": []
+    },
     "2.3.6": {
         "date": "2025-06-09",
         "features": [
